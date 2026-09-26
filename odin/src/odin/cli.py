@@ -1936,6 +1936,15 @@ class OdinCLI:
                     console.print(f"[dim red]{err}[/dim red]")
 
     # ------------------------------------------------------------------
+    # tui (interactive terminal user interface)
+    # ------------------------------------------------------------------
+
+    def tui(self):
+        """Launch the interactive Terminal User Interface (TUI)."""
+        from odin.tui import launch_interactive_tui
+        launch_interactive_tui()
+
+    # ------------------------------------------------------------------
     # errors (persistent error ledger & diagnostic memory)
     # ------------------------------------------------------------------
 

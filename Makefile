@@ -105,20 +105,24 @@ run:
 		echo "══════════════════════════════════════" ; \
 		$(PY) -m odin.cli solve "$${SPEC}" $${VERIFY:+--verify-cmd "$$VERIFY"} $${MOCK:+--mock} ; \
 	else \
-		echo "[run] Checking harness health & provider configuration..." ; \
-		echo "" ; \
-		$(PY) -m odin.cli doctor --fast 2>/dev/null || \
-			echo "[run] odin doctor completed." ; \
-		echo "" ; \
-		echo "══════════════════════════════════════" ; \
-		echo "  Harness is ready for autonomous execution." ; \
-		echo "══════════════════════════════════════" ; \
-		echo "" ; \
-		echo "  Usage examples:" ; \
-		echo "    make run TASK=\"Fix IndexError in sequence parser\"" ; \
-		echo "    make run SPEC=\"path/to/spec.md\"" ; \
-		echo "    make solve TASK=\"Fix bug\" VERIFY=\"pytest tests/test_bug.py\"" ; \
-		echo "" ; \
+		if [ -t 0 ]; then \
+			$(PY) -m odin.tui ; \
+		else \
+			echo "[run] Checking harness health & provider configuration..." ; \
+			echo "" ; \
+			$(PY) -m odin.cli doctor --fast 2>/dev/null || \
+				echo "[run] odin doctor completed." ; \
+			echo "" ; \
+			echo "══════════════════════════════════════" ; \
+			echo "  Harness is ready for autonomous execution." ; \
+			echo "══════════════════════════════════════" ; \
+			echo "" ; \
+			echo "  Usage examples:" ; \
+			echo "    make run TASK=\"Fix IndexError in sequence parser\"" ; \
+			echo "    make run SPEC=\"path/to/spec.md\"" ; \
+			echo "    make solve TASK=\"Fix bug\" VERIFY=\"pytest tests/test_bug.py\"" ; \
+			echo "" ; \
+		fi \
 	fi
 
 # ──────────────────────────────────────────────
@@ -147,7 +151,7 @@ test:
 	@echo "══════════════════════════════════════"
 	@echo ""
 	@echo "[test] Running hackathon baseline & integration test suites..."
-	@$(PY) -m pytest tests/test_hackathon_baseline.py tests/test_phase2_integration.py tests/test_phase3_solver.py tests/test_phase4_error_ledger.py tests/test_e2e_swe_benchmark.py -v 2>&1
+	@$(PY) -m pytest tests/test_hackathon_baseline.py tests/test_phase2_integration.py tests/test_phase3_solver.py tests/test_phase4_error_ledger.py tests/test_e2e_swe_benchmark.py tests/test_tui.py -v 2>&1
 	@echo ""
 	@echo "[test] Running odin unit tests..."
 	@cd odin && ../$(PY) -m pytest tests/unit/ -q --tb=short 2>&1
