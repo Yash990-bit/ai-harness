@@ -89,7 +89,7 @@ async def test_openrouter_free_deepseek_resolution():
         assert res.success is True
         call_args, call_kwargs = mock_post.call_args
         assert call_args[0] == "https://openrouter.ai/api/v1/chat/completions"
-        assert call_kwargs["json"]["model"] == "deepseek/deepseek-chat:free"
+        assert call_kwargs["json"]["model"] == "openrouter/free"
 
 
 def test_orchestrator_recognizes_deepseek_with_api_key():

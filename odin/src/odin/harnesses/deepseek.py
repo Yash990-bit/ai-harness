@@ -70,10 +70,13 @@ class DeepSeekHarness(BaseHarness):
             or ("https://openrouter.ai/api/v1/chat/completions" if is_openrouter else self.api_url)
         )
 
-        if is_openrouter and clean_model in ("deepseek-chat", "deepseek-v3", "chat"):
-            target_model = "deepseek/deepseek-chat:free"
-        elif is_openrouter and clean_model in ("deepseek-reasoner", "deepseek-r1", "reasoner"):
-            target_model = "deepseek/deepseek-r1:free"
+        if is_openrouter:
+            if clean_model in ("deepseek-chat", "deepseek-v3", "chat", "default"):
+                target_model = os.environ.get("AI_MODEL") or "openrouter/free"
+            elif clean_model in ("deepseek-reasoner", "deepseek-r1", "reasoner"):
+                target_model = "openrouter/free"
+            else:
+                target_model = clean_model
         else:
             target_model = clean_model
 
