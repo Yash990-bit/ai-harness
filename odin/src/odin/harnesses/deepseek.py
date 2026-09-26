@@ -63,12 +63,30 @@ class DeepSeekHarness(BaseHarness):
         # Strip provider prefixes if passed (e.g. deepseek/deepseek-chat -> deepseek-chat)
         clean_model = model.split("/")[-1]
 
+        is_openrouter = api_key.startswith("sk-or-")
+        api_endpoint = (
+            os.environ.get("DEEPSEEK_BASE_URL")
+            or getattr(self.config, "base_url", None)
+            or ("https://openrouter.ai/api/v1/chat/completions" if is_openrouter else self.api_url)
+        )
+
+        if is_openrouter and clean_model in ("deepseek-chat", "deepseek-v3", "chat"):
+            target_model = "deepseek/deepseek-chat:free"
+        elif is_openrouter and clean_model in ("deepseek-reasoner", "deepseek-r1", "reasoner"):
+            target_model = "deepseek/deepseek-r1:free"
+        else:
+            target_model = clean_model
+
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
+        if is_openrouter:
+            headers["HTTP-Referer"] = "https://github.com/Yash990-bit/ai-harness"
+            headers["X-Title"] = "AI Harness"
+
         payload = {
-            "model": clean_model,
+            "model": target_model,
             "messages": [
                 {
                     "role": "system",
@@ -86,7 +104,7 @@ class DeepSeekHarness(BaseHarness):
 
         try:
             async with httpx.AsyncClient(timeout=timeout_seconds) as client:
-                resp = await client.post(self.api_url, json=payload, headers=headers)
+                resp = await client.post(api_endpoint, json=payload, headers=headers)
                 resp.raise_for_status()
                 data = resp.json()
 

@@ -70,6 +70,28 @@ async def test_deepseek_execute_mocked():
         assert res.metadata["usage"]["total_tokens"] == 40
 
 
+@pytest.mark.asyncio
+async def test_openrouter_free_deepseek_resolution():
+    """Verify OpenRouter key format triggers free deepseek endpoint and model mapping."""
+    cfg = AgentConfig(api_key="sk-or-v1-fake-free-key", default_model="deepseek-chat")
+    harness = get_harness("deepseek", cfg)
+
+    fake_response = {
+        "choices": [{"message": {"content": "ok"}}],
+        "usage": {"total_tokens": 10},
+    }
+    mock_resp = MagicMock(status_code=200)
+    mock_resp.json.return_value = fake_response
+    mock_resp.raise_for_status = MagicMock()
+
+    with patch("httpx.AsyncClient.post", return_value=mock_resp) as mock_post:
+        res = await harness.execute("test", context={"validate_status": False})
+        assert res.success is True
+        call_args, call_kwargs = mock_post.call_args
+        assert call_args[0] == "https://openrouter.ai/api/v1/chat/completions"
+        assert call_kwargs["json"]["model"] == "deepseek/deepseek-chat:free"
+
+
 def test_orchestrator_recognizes_deepseek_with_api_key():
     """Verify orchestrator sees deepseek as available without local CLI binary."""
     with patch.dict(os.environ, {"AI_API_KEY": "sk-dummy", "AI_PROVIDER": "deepseek"}):
