@@ -290,10 +290,11 @@ def launch_interactive_tui():
         console.print("  [cyan][6][/cyan] 🩺 [bold white]System Doctor & Environment Diagnostics[/bold white]")
         console.print("  [cyan][7][/cyan] 🧪 [bold white]Run Verification Test Suites[/bold white] (make test)")
         console.print("  [cyan][8][/cyan] 🧹 [bold white]Clean State & Artifacts[/bold white] (make clean)")
+        console.print("  [cyan][9][/cyan] 🖥️ [bold white]Launch Full-Screen Textual GUI App[/bold white] (make textual)")
         console.print("  [cyan][0][/cyan] 🚪 [bold dim]Exit[/bold dim]\n")
 
         try:
-            choice = Prompt.ask("[bold]Enter choice[/bold]", choices=["1", "2", "3", "4", "5", "6", "7", "8", "0"], default="1")
+            choice = Prompt.ask("[bold]Enter choice[/bold]", choices=["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"], default="1")
         except (KeyboardInterrupt, EOFError):
             console.print("\n[dim]Exiting AI Harness TUI. Goodbye![/dim]")
             break
@@ -314,6 +315,12 @@ def launch_interactive_tui():
             run_tests()
         elif choice == "8":
             subprocess.run(["make", "clean"], check=False)
+        elif choice == "9":
+            try:
+                from odin.textual_app import main as launch_textual
+                launch_textual()
+            except Exception as e:
+                console.print(f"[bold red]Failed to launch Textual app: {e}[/bold red]")
         elif choice == "0":
             console.print("\n[dim]Exiting AI Harness TUI. Goodbye![/dim]")
             break
