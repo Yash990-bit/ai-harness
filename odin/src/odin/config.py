@@ -48,6 +48,19 @@ def map_hackathon_credentials(agents: Optional[dict] = None) -> None:
     key = os.environ.get("AI_API_KEY")
     if not key:
         return
+    key = key.strip("\"' ")
+    os.environ["AI_API_KEY"] = key
+
+    if not os.environ.get("AI_PROVIDER"):
+        if key.startswith("gsk_"):
+            os.environ["AI_PROVIDER"] = "groq"
+        elif key.startswith("AIza"):
+            os.environ["AI_PROVIDER"] = "gemini"
+        elif key.startswith("sk-or-"):
+            os.environ["AI_PROVIDER"] = "deepseek"
+            os.environ["AI_MODEL"] = "openrouter/free"
+        elif key.startswith("sk-ant-"):
+            os.environ["AI_PROVIDER"] = "claude"
 
     provider = (os.environ.get("AI_PROVIDER") or "gemini").strip().lower()
     mapping = {

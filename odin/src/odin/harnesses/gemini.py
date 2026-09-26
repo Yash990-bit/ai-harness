@@ -46,7 +46,8 @@ class GeminiHarness(BaseHarness):
         if "preview" in clean_model or clean_model.startswith("gemini-3"):
             clean_model = "gemini-2.5-flash"
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{clean_model}:generateContent?key={api_key}"
+        clean_key = api_key.strip("\"' ")
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{clean_model}:generateContent?key={clean_key}"
         payload = {
             "contents": [
                 {
