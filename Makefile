@@ -84,26 +84,20 @@ run:
 	@echo "  AI_PROVIDER: $${AI_PROVIDER:-auto (defaults to gemini)}"
 	@echo "  AI_MODEL:    $${AI_MODEL:-default}"
 	@echo ""
-	@if [ -n "$(TASK)" ]; then \
+	@export SOLVER_TASK="$${TASK:-$(TASK)}" ; \
+	export SOLVER_SPEC="$${SPEC:-$(SPEC)}" ; \
+	export SOLVER_VERIFY="$${VERIFY:-$(VERIFY)}" ; \
+	export SOLVER_MOCK="$${MOCK:-$(MOCK)}" ; \
+	if [ -n "$$SOLVER_TASK" ]; then \
 		echo "══════════════════════════════════════" ; \
-		echo "  Executing Autonomous Task: $(TASK)" ; \
+		echo "  Executing Autonomous Task: $$SOLVER_TASK" ; \
 		echo "══════════════════════════════════════" ; \
-		$(PY) -m odin.cli solve --prompt "$(TASK)" $(if $(VERIFY),--verify-cmd "$(VERIFY)",) $(if $(MOCK),--mock,) ; \
-	elif [ -n "$${TASK:-}" ]; then \
+		$(PY) -c 'import os, subprocess, sys; cmd=[sys.argv[1], "-m", "odin.cli", "solve", "--prompt", os.environ["SOLVER_TASK"]]; (cmd.extend(["--verify-cmd", os.environ["SOLVER_VERIFY"]]) if os.environ.get("SOLVER_VERIFY") else None); (cmd.append("--mock") if os.environ.get("SOLVER_MOCK") else None); sys.exit(subprocess.run(cmd).returncode)' $(PY) ; \
+	elif [ -n "$$SOLVER_SPEC" ]; then \
 		echo "══════════════════════════════════════" ; \
-		echo "  Executing Autonomous Task: $${TASK}" ; \
+		echo "  Executing Autonomous Spec: $$SOLVER_SPEC" ; \
 		echo "══════════════════════════════════════" ; \
-		$(PY) -m odin.cli solve --prompt "$${TASK}" $${VERIFY:+--verify-cmd "$$VERIFY"} $${MOCK:+--mock} ; \
-	elif [ -n "$(SPEC)" ]; then \
-		echo "══════════════════════════════════════" ; \
-		echo "  Executing Autonomous Spec: $(SPEC)" ; \
-		echo "══════════════════════════════════════" ; \
-		$(PY) -m odin.cli solve "$(SPEC)" $(if $(VERIFY),--verify-cmd "$(VERIFY)",) $(if $(MOCK),--mock,) ; \
-	elif [ -n "$${SPEC:-}" ]; then \
-		echo "══════════════════════════════════════" ; \
-		echo "  Executing Autonomous Spec: $${SPEC}" ; \
-		echo "══════════════════════════════════════" ; \
-		$(PY) -m odin.cli solve "$${SPEC}" $${VERIFY:+--verify-cmd "$$VERIFY"} $${MOCK:+--mock} ; \
+		$(PY) -c 'import os, subprocess, sys; cmd=[sys.argv[1], "-m", "odin.cli", "solve", os.environ["SOLVER_SPEC"]]; (cmd.extend(["--verify-cmd", os.environ["SOLVER_VERIFY"]]) if os.environ.get("SOLVER_VERIFY") else None); (cmd.append("--mock") if os.environ.get("SOLVER_MOCK") else None); sys.exit(subprocess.run(cmd).returncode)' $(PY) ; \
 	else \
 		if [ -t 0 ]; then \
 			$(PY) -m odin.tui ; \
@@ -129,14 +123,14 @@ run:
 # solve: autonomous issue resolution & patch creation
 # ──────────────────────────────────────────────
 solve:
-	@if [ -n "$(TASK)" ]; then \
-		$(PY) -m odin.cli solve --prompt "$(TASK)" $(if $(VERIFY),--verify-cmd "$(VERIFY)",) $(if $(MOCK),--mock,) ; \
-	elif [ -n "$${TASK:-}" ]; then \
-		$(PY) -m odin.cli solve --prompt "$${TASK}" $${VERIFY:+--verify-cmd "$$VERIFY"} $${MOCK:+--mock} ; \
-	elif [ -n "$(SPEC)" ]; then \
-		$(PY) -m odin.cli solve "$(SPEC)" $(if $(VERIFY),--verify-cmd "$(VERIFY)",) $(if $(MOCK),--mock,) ; \
-	elif [ -n "$${SPEC:-}" ]; then \
-		$(PY) -m odin.cli solve "$${SPEC}" $${VERIFY:+--verify-cmd "$$VERIFY"} $${MOCK:+--mock} ; \
+	@export SOLVER_TASK="$${TASK:-$(TASK)}" ; \
+	export SOLVER_SPEC="$${SPEC:-$(SPEC)}" ; \
+	export SOLVER_VERIFY="$${VERIFY:-$(VERIFY)}" ; \
+	export SOLVER_MOCK="$${MOCK:-$(MOCK)}" ; \
+	if [ -n "$$SOLVER_TASK" ]; then \
+		$(PY) -c 'import os, subprocess, sys; cmd=[sys.argv[1], "-m", "odin.cli", "solve", "--prompt", os.environ["SOLVER_TASK"]]; (cmd.extend(["--verify-cmd", os.environ["SOLVER_VERIFY"]]) if os.environ.get("SOLVER_VERIFY") else None); (cmd.append("--mock") if os.environ.get("SOLVER_MOCK") else None); sys.exit(subprocess.run(cmd).returncode)' $(PY) ; \
+	elif [ -n "$$SOLVER_SPEC" ]; then \
+		$(PY) -c 'import os, subprocess, sys; cmd=[sys.argv[1], "-m", "odin.cli", "solve", os.environ["SOLVER_SPEC"]]; (cmd.extend(["--verify-cmd", os.environ["SOLVER_VERIFY"]]) if os.environ.get("SOLVER_VERIFY") else None); (cmd.append("--mock") if os.environ.get("SOLVER_MOCK") else None); sys.exit(subprocess.run(cmd).returncode)' $(PY) ; \
 	else \
 		echo "Usage: make solve TASK=\"Issue prompt\" [VERIFY=\"pytest ...\"] [MOCK=1]" ; \
 		echo "       make solve SPEC=\"spec.md\" [VERIFY=\"pytest ...\"] [MOCK=1]" ; \
