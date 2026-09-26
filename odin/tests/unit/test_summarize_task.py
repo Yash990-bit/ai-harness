@@ -51,6 +51,7 @@ def _make_orchestrator(comments=None, task=None):
     orch._spec_backend = None
     orch._routing_default_cache = {}
     orch._worktree = None
+    orch._assert_agent_cli_available = MagicMock()
 
     # Default task
     if task is None:
