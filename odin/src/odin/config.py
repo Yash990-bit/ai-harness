@@ -257,6 +257,7 @@ def _apply_forced_provider_env(cfg: OdinConfig) -> OdinConfig:
     return cfg.model_copy(update={
         "forced_base_provider": forced.provider,
         "forced_base_model": forced.model,
+        "base_agent": forced.provider,
     })
 
 
