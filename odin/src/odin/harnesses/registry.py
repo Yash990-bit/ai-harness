@@ -67,6 +67,7 @@ def _import_all_harnesses():
         agy,
         claude,
         codex,
+        deepseek,
         gemini,
         glm,
         minimax,

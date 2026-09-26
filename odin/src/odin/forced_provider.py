@@ -9,7 +9,7 @@ from typing import Optional
 
 from odin.models import OdinConfig
 
-ALLOWED_FORCED_PROVIDERS = {"gemini"}
+ALLOWED_FORCED_PROVIDERS = {"gemini", "deepseek"}
 
 
 @dataclass(frozen=True)
@@ -38,12 +38,13 @@ def resolve_forced_provider(config: OdinConfig) -> ForcedProviderSelection:
     has_api_key = bool(
         cfg.api_key
         or os.environ.get("GEMINI_API_KEY")
+        or os.environ.get("DEEPSEEK_API_KEY")
         or os.environ.get("AI_API_KEY")
         or (provider == "claude" and os.environ.get("ANTHROPIC_API_KEY"))
         or (provider == "codex" and os.environ.get("OPENAI_API_KEY"))
     )
     if provider != "mock" and shutil.which(cli_command) is None:
-        if not (provider == "gemini" and has_api_key):
+        if not (provider in ("gemini", "deepseek") and has_api_key):
             raise RuntimeError(
                 f"Forced provider '{provider}' is unavailable: CLI '{cli_command}' not found on PATH."
             )

@@ -105,7 +105,7 @@ def _list_available_agents(config: OdinConfig) -> list[str]:
         if name == "mock":
             available.append(name)
             continue
-        if name == "gemini" and (cfg.api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("AI_API_KEY")):
+        if name in ("gemini", "deepseek") and (cfg.api_key or os.environ.get(f"{name.upper()}_API_KEY") or os.environ.get("AI_API_KEY")):
             available.append(name)
             continue
         binary = _resolve_agent_cli(name, cfg)
@@ -482,7 +482,7 @@ class Orchestrator:
         binary = _resolve_agent_cli(agent_name, cfg)
         if binary and shutil.which(binary):
             return
-        if agent_name == "gemini" and (cfg.api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("AI_API_KEY")):
+        if agent_name in ("gemini", "deepseek") and (cfg.api_key or os.environ.get(f"{agent_name.upper()}_API_KEY") or os.environ.get("AI_API_KEY")):
             return
         available = _list_available_agents(self.config)
         avail_str = ", ".join(available) if available else "none"

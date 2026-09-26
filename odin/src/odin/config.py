@@ -52,6 +52,7 @@ def map_hackathon_credentials(agents: Optional[dict] = None) -> None:
     provider = (os.environ.get("AI_PROVIDER") or "gemini").strip().lower()
     mapping = {
         "gemini": ["GEMINI_API_KEY"],
+        "deepseek": ["DEEPSEEK_API_KEY"],
         "claude": ["ANTHROPIC_API_KEY"],
         "codex": ["OPENAI_API_KEY"],
         "minimax": ["MINIMAX_API_KEY"],
@@ -68,11 +69,14 @@ def map_hackathon_credentials(agents: Optional[dict] = None) -> None:
             agent_cfg.api_key = key
         agent_cfg.enabled = True
 
-    if provider == "gemini" and not os.environ.get("FORCED_BASE_PROVIDER"):
-        os.environ["FORCED_BASE_PROVIDER"] = "gemini"
+    if provider in ("gemini", "deepseek"):
+        os.environ["FORCED_BASE_PROVIDER"] = provider
+
+    if provider == "deepseek" and not os.environ.get("AI_MODEL"):
+        os.environ["FORCED_BASE_MODEL"] = "deepseek-chat"
 
     ai_model = os.environ.get("AI_MODEL")
-    if ai_model and not os.environ.get("FORCED_BASE_MODEL"):
+    if ai_model:
         os.environ["FORCED_BASE_MODEL"] = ai_model
 
 
@@ -518,6 +522,17 @@ def _default_config(source: str) -> OdinConfig:
             },
             default_model="gemini-3-flash-preview",
             premium_model="gemini-3.1-pro-preview",
+        ),
+        "deepseek": AgentConfig(
+            cli_command="deepseek",
+            capabilities=["coding", "writing", "run_shell_command", "read_file", "write_file"],
+            cost_tier=CostTier.LOW,
+            models={
+                "deepseek-chat": "DeepSeek-V3 flagship model",
+                "deepseek-reasoner": "DeepSeek-R1 reasoning model",
+            },
+            default_model="deepseek-chat",
+            premium_model="deepseek-reasoner",
         ),
         "minimax": AgentConfig(
             cli_command="opencode",

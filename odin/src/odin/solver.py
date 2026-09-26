@@ -151,10 +151,6 @@ class AutonomousSolver:
         logger.info("Planning tasks for issue...")
         if mock:
             # Deterministic mock planning for testing & benchmarking
-            from odin.harnesses.mock import MockHarness
-            from odin.harnesses.registry import HARNESS_REGISTRY
-            for name in list(self.config.agents.keys()):
-                HARNESS_REGISTRY[name] = MockHarness
 
             spec_id = f"mock-spec-{int(time.time())}"
             tasks = [
