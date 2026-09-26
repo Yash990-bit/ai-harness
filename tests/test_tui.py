@@ -43,3 +43,27 @@ def test_cli_tui_command():
     cli = OdinCLI()
     with patch("sys.stdin.isatty", return_value=False):
         cli.tui()
+
+
+def test_prompt_for_initial_api_key_when_already_set():
+    """Verify prompt is bypassed if API key already exists in environment."""
+    from odin.tui import prompt_for_initial_api_key
+    with patch.dict(os.environ, {"AI_API_KEY": "AIzaSyTestKey123"}):
+        with patch("rich.prompt.Prompt.ask") as mock_ask:
+            prompt_for_initial_api_key()
+            mock_ask.assert_not_called()
+
+
+def test_prompt_for_initial_api_key_when_entered():
+    """Verify entered API key sets environment and maps credentials."""
+    from odin.tui import prompt_for_initial_api_key
+    env = os.environ.copy()
+    env.pop("AI_API_KEY", None)
+    env.pop("GEMINI_API_KEY", None)
+    env.pop("DEEPSEEK_API_KEY", None)
+    env.pop("AI_PROVIDER", None)
+    with patch.dict(os.environ, env, clear=True):
+        with patch("rich.prompt.Prompt.ask", return_value="AIzaSyNewGeminiKey"):
+            prompt_for_initial_api_key()
+            assert os.environ.get("AI_API_KEY") == "AIzaSyNewGeminiKey"
+            assert os.environ.get("AI_PROVIDER") == "gemini"

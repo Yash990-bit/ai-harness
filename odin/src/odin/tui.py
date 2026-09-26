@@ -269,6 +269,43 @@ def run_tests():
     console.print()
 
 
+def prompt_for_initial_api_key():
+    """Prompt evaluator for API key on launch if not currently present in environment."""
+    api_key = os.getenv("AI_API_KEY") or os.getenv("GEMINI_API_KEY") or os.getenv("DEEPSEEK_API_KEY")
+    if api_key:
+        return
+
+    display_header()
+    console.print("\n[bold yellow]🔑 Welcome Evaluator! No AI_API_KEY detected in environment.[/bold yellow]")
+    console.print("[dim]Paste your API key below to configure it for this session, or press Enter to continue in Offline Mock mode.[/dim]\n")
+    try:
+        user_key = Prompt.ask("[bold cyan]Enter AI_API_KEY[/bold cyan] (or press Enter for Mock mode)", default="").strip()
+    except (KeyboardInterrupt, EOFError):
+        return
+
+    if user_key:
+        os.environ["AI_API_KEY"] = user_key
+        # Auto-detect provider if not explicitly set
+        if not os.getenv("AI_PROVIDER"):
+            if user_key.startswith("AIza"):
+                os.environ["AI_PROVIDER"] = "gemini"
+            elif user_key.startswith("sk-or-"):
+                os.environ["AI_PROVIDER"] = "deepseek"
+                os.environ["AI_MODEL"] = "openrouter/free"
+            elif user_key.startswith("sk-ant-"):
+                os.environ["AI_PROVIDER"] = "claude"
+            elif user_key.startswith("sk-"):
+                os.environ["AI_PROVIDER"] = "deepseek"
+            else:
+                os.environ["AI_PROVIDER"] = "gemini"
+        map_hackathon_credentials()
+        console.print(f"[bold green]✓ API Key saved for provider: {os.getenv('AI_PROVIDER')}[/bold green]\n")
+        time.sleep(1.0)
+    else:
+        console.print("[dim]Proceeding in Offline Mock Mode (Zero Cost).[/dim]\n")
+        time.sleep(0.8)
+
+
 def launch_interactive_tui():
     """Main interactive loop."""
     if not sys.stdin.isatty():
@@ -277,6 +314,8 @@ def launch_interactive_tui():
         console.print("[dim]Non-interactive terminal detected.[/dim]")
         console.print("  Usage: [bold]make run TASK=\"...\"[/bold] or [bold]make solve TASK=\"...\" VERIFY=\"...\"[/bold]\n")
         return
+
+    prompt_for_initial_api_key()
 
     while True:
         console.clear()
