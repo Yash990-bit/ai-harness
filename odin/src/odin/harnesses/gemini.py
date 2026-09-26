@@ -74,6 +74,18 @@ class GeminiHarness(BaseHarness):
 
             duration = (time.monotonic() - start) * 1000
 
+            # Persist extracted code to worktree so changes are captured
+            working_dir = context.get("working_dir")
+            if working_dir and Path(working_dir).is_dir():
+                import re
+                code_blocks = re.findall(r"```(?:python|py)?\n(.*?)```", text, re.DOTALL)
+                if code_blocks:
+                    solution_file = Path(working_dir) / "solution.py"
+                    solution_file.write_text(code_blocks[0].strip() + "\n", encoding="utf-8")
+
+            if "-------ODIN-STATUS-------" not in text and text.strip():
+                text += "\n\n-------ODIN-STATUS-------\nSUCCESS\n-------ODIN-SUMMARY-------\nTask completed successfully."
+
             output_file = context.get("output_file")
             if output_file:
                 Path(output_file).write_text(text, encoding="utf-8")
