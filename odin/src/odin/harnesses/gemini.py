@@ -42,6 +42,10 @@ class GeminiHarness(BaseHarness):
         start = time.monotonic()
         model = context.get("model") or self.config.default_model or "gemini-2.5-flash"
         clean_model = model.split("/")[-1]
+        # Route preview/unstable endpoints to stable production gemini-2.5-flash
+        if "preview" in clean_model or clean_model.startswith("gemini-3"):
+            clean_model = "gemini-2.5-flash"
+
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{clean_model}:generateContent?key={api_key}"
         payload = {
             "contents": [
@@ -55,6 +59,9 @@ class GeminiHarness(BaseHarness):
         try:
             async with httpx.AsyncClient(timeout=float(timeout_seconds)) as client:
                 resp = await client.post(url, json=payload)
+                if resp.status_code == 503 and clean_model != "gemini-2.5-flash":
+                    fallback_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+                    resp = await client.post(fallback_url, json=payload)
                 resp.raise_for_status()
                 data = resp.json()
 
