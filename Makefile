@@ -7,7 +7,7 @@
 #
 # No credentials are stored in this file.
 
-.PHONY: setup run test clean doctor solve
+.PHONY: setup run test clean doctor solve tui
 
 SHELL := /bin/bash
 VENV := .venv
@@ -99,24 +99,7 @@ run:
 		echo "══════════════════════════════════════" ; \
 		$(PY) -c 'import os, subprocess, sys; cmd=[sys.argv[1], "-m", "odin.cli", "solve", os.environ["SOLVER_SPEC"]]; (cmd.extend(["--verify-cmd", os.environ["SOLVER_VERIFY"]]) if os.environ.get("SOLVER_VERIFY") else None); (cmd.append("--mock") if os.environ.get("SOLVER_MOCK") else None); sys.exit(subprocess.run(cmd).returncode)' $(PY) ; \
 	else \
-		if [ -t 0 ]; then \
-			$(PY) -m odin.tui ; \
-		else \
-			echo "[run] Checking harness health & provider configuration..." ; \
-			echo "" ; \
-			$(PY) -m odin.cli doctor --fast 2>/dev/null || \
-				echo "[run] odin doctor completed." ; \
-			echo "" ; \
-			echo "══════════════════════════════════════" ; \
-			echo "  Harness is ready for autonomous execution." ; \
-			echo "══════════════════════════════════════" ; \
-			echo "" ; \
-			echo "  Usage examples:" ; \
-			echo "    make run TASK=\"Fix IndexError in sequence parser\"" ; \
-			echo "    make run SPEC=\"path/to/spec.md\"" ; \
-			echo "    make solve TASK=\"Fix bug\" VERIFY=\"pytest tests/test_bug.py\"" ; \
-			echo "" ; \
-		fi \
+		$(PY) -m odin.tui ; \
 	fi
 
 # ──────────────────────────────────────────────
@@ -190,3 +173,10 @@ clean-all: clean
 # ──────────────────────────────────────────────
 doctor:
 	@source $(VENV)/bin/activate 2>/dev/null; $(PY) -m odin.cli doctor
+
+# ──────────────────────────────────────────────
+# tui: interactive terminal user interface
+# ──────────────────────────────────────────────
+tui:
+	@$(PY) -m odin.tui
+
