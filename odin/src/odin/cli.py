@@ -1936,6 +1936,76 @@ class OdinCLI:
                     console.print(f"[dim red]{err}[/dim red]")
 
     # ------------------------------------------------------------------
+    # errors (persistent error ledger & diagnostic memory)
+    # ------------------------------------------------------------------
+
+    def errors(
+        self,
+        list_all: bool = False,
+        disposition: Optional[str] = None,
+        set_id: Optional[str] = None,
+        to_status: Optional[str] = None,
+        note: str = "",
+    ):
+        """Inspect and triage the compounding error ledger (.odin/errors.jsonl).
+
+        Examples:
+            odin errors                         Summary of error signatures & dispositions
+            odin errors --list-all              List all individual recorded errors
+            odin errors --disposition open      List open errors needing triage
+            odin errors --set-id err_123 --to-status fixed --note "Resolved in tests"
+        """
+        from odin.error_ledger import LocalErrorLedger
+
+        ledger = LocalErrorLedger()
+
+        if set_id and to_status:
+            updated = ledger.set_disposition(set_id, to_status, note=note)
+            if updated:
+                console.print(f"[green]Updated {set_id}[/green] → [bold]{to_status}[/bold] (note: {note or 'none'})")
+            else:
+                console.print(f"[red]Error event not found: {set_id}[/red]")
+            return
+
+        summary = ledger.summary()
+        if summary["total_errors"] == 0:
+            console.print("[green]Error ledger is clean — 0 errors recorded.[/green]")
+            return
+
+        console.print(f"\n[bold]Error Ledger Summary:[/bold] {summary['total_errors']} total | "
+                      f"[red]{summary['open']} open[/red] | "
+                      f"[green]{summary['fixed']} fixed[/green] | "
+                      f"[dim]{summary['non_issue']} non-issue[/dim]\n")
+
+        if not list_all and not disposition:
+            table = Table(title="Error Signatures")
+            table.add_column("Signature", style="cyan", no_wrap=True)
+            table.add_column("Occurrences", justify="right", style="magenta")
+            for sig, count in sorted(summary["signatures"].items(), key=lambda x: -x[1]):
+                table.add_row(sig, str(count))
+            console.print(table)
+            console.print("\n[dim]Run 'odin errors --list-all' to view individual events.[/dim]")
+            return
+
+        events = ledger.list_events(disposition=disposition)
+        table = Table(title=f"Error Events ({len(events)})")
+        table.add_column("ID", style="cyan", no_wrap=True)
+        table.add_column("Source", style="blue")
+        table.add_column("Disposition", style="bold")
+        table.add_column("Message", style="white")
+        table.add_column("Note", style="dim")
+        for ev in events:
+            color = "red" if ev.disposition == "open" else ("green" if ev.disposition == "fixed" else "dim")
+            table.add_row(
+                ev.event_id,
+                ev.source,
+                f"[{color}]{ev.disposition}[/{color}]",
+                ev.message[:80],
+                ev.disposition_note[:40],
+            )
+        console.print(table)
+
+    # ------------------------------------------------------------------
     # status (enhanced with spec column and filters)
     # ------------------------------------------------------------------
 

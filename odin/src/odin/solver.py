@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from odin.config import load_config
+from odin.error_ledger import LocalErrorLedger
 from odin.models import OdinConfig
 from odin.orchestrator import Orchestrator
 from odin.taskit.models import Task, TaskStatus
@@ -71,6 +72,7 @@ class AutonomousSolver:
         self.reports_dir = self.output_dir / "reports"
         self.patches_dir.mkdir(parents=True, exist_ok=True)
         self.reports_dir.mkdir(parents=True, exist_ok=True)
+        self.error_ledger = LocalErrorLedger(self.output_dir / "errors.jsonl")
 
     def _get_git_diff(self) -> str:
         """Capture current unstaged and staged git diff."""
@@ -213,14 +215,35 @@ class AutonomousSolver:
                 else:
                     err = res.get("error") or "Unknown error"
                     execution_errors.append(f"Task {task.id} failed: {err}")
+                    self.error_ledger.record(
+                        source="execution_failure",
+                        source_id=task.id,
+                        message=str(err),
+                        metadata={"spec_id": spec_id, "title": task.title},
+                    )
             except Exception as exc:
                 execution_errors.append(f"Task {task.id} exception: {exc}")
+                self.error_ledger.record(
+                    source="execution_failure",
+                    source_id=task.id,
+                    message=str(exc),
+                    metadata={"spec_id": spec_id, "title": task.title},
+                )
 
         # Step 3: Verification (if verify_cmd provided)
         verification_passed = True
         verification_output = ""
+        last_error_event = None
         if verify_cmd:
             verification_passed, verification_output = self._run_verification(verify_cmd)
+            if not verification_passed:
+                last_error_event = self.error_ledger.record(
+                    source="verification_failure",
+                    source_id=spec_id,
+                    message=f"Command `{verify_cmd}` failed: {verification_output[:250]}",
+                    traceback=verification_output,
+                    metadata={"verify_cmd": verify_cmd},
+                )
 
             # Simple self-correction retry if verification failed
             retries = 0
@@ -244,6 +267,12 @@ class AutonomousSolver:
                 except Exception:
                     pass
                 verification_passed, verification_output = self._run_verification(verify_cmd)
+                if verification_passed and last_error_event:
+                    self.error_ledger.set_disposition(
+                        last_error_event.event_id,
+                        "fixed",
+                        note=f"Self-corrected on attempt {retries}",
+                    )
 
         # Step 4: Export solution patch
         diff_text = self._get_git_diff()
