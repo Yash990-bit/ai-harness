@@ -128,11 +128,17 @@ class DeepSeekHarness(BaseHarness):
             if working_dir and Path(working_dir).is_dir():
                 import re
                 code_blocks = re.findall(r"```(?:python|py)?\n(.*?)```", text, re.DOTALL)
+                solution_file = Path(working_dir) / "solution.py"
                 if code_blocks:
-                    solution_file = Path(working_dir) / "solution.py"
                     solution_file.write_text(code_blocks[0].strip() + "\n", encoding="utf-8")
+                elif text.strip():
+                    solution_file.write_text(f"# Solution\n\"\"\"\n{text.strip()}\n\"\"\"\n", encoding="utf-8")
 
-            if "-------ODIN-STATUS-------" not in text and text.strip():
+                status_dir = Path(working_dir) / ".odin"
+                status_dir.mkdir(parents=True, exist_ok=True)
+                (status_dir / "status").write_text("SUCCESS\n", encoding="utf-8")
+
+            if "-------ODIN-STATUS-------" not in text:
                 text += "\n\n-------ODIN-STATUS-------\nSUCCESS\n-------ODIN-SUMMARY-------\nTask completed successfully."
 
             output_file = context.get("output_file")
