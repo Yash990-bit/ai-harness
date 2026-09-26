@@ -53,6 +53,7 @@ def map_hackathon_credentials(agents: Optional[dict] = None) -> None:
     mapping = {
         "gemini": ["GEMINI_API_KEY"],
         "deepseek": ["DEEPSEEK_API_KEY"],
+        "groq": ["GROQ_API_KEY"],
         "claude": ["ANTHROPIC_API_KEY"],
         "codex": ["OPENAI_API_KEY"],
         "minimax": ["MINIMAX_API_KEY"],
@@ -69,11 +70,13 @@ def map_hackathon_credentials(agents: Optional[dict] = None) -> None:
             agent_cfg.api_key = key
         agent_cfg.enabled = True
 
-    if provider in ("gemini", "deepseek"):
+    if provider in ("gemini", "deepseek", "groq"):
         os.environ["FORCED_BASE_PROVIDER"] = provider
 
     if provider == "deepseek" and not os.environ.get("AI_MODEL"):
         os.environ["FORCED_BASE_MODEL"] = "deepseek-chat"
+    elif provider == "groq" and not os.environ.get("AI_MODEL"):
+        os.environ["FORCED_BASE_MODEL"] = "qwen/qwen3.8-27b"
 
     ai_model = os.environ.get("AI_MODEL")
     if ai_model:
@@ -534,6 +537,16 @@ def _default_config(source: str) -> OdinConfig:
             },
             default_model="deepseek-chat",
             premium_model="deepseek-reasoner",
+        ),
+        "groq": AgentConfig(
+            cli_command="groq",
+            capabilities=["coding", "writing", "run_shell_command", "read_file", "write_file"],
+            cost_tier=CostTier.LOW,
+            models={
+                "qwen/qwen3.8-27b": "Groq Qwen 27B ultra-fast LPU inference",
+                "openai/gpt-oss-120b": "Groq GPT OSS 120B",
+            },
+            default_model="qwen/qwen3.8-27b",
         ),
         "minimax": AgentConfig(
             cli_command="opencode",

@@ -136,7 +136,7 @@ test:
 	@echo "══════════════════════════════════════"
 	@echo ""
 	@echo "[test] Running hackathon baseline & integration test suites..."
-	@$(PY) -m pytest tests/test_hackathon_baseline.py tests/test_phase2_integration.py tests/test_phase3_solver.py tests/test_phase4_error_ledger.py tests/test_e2e_swe_benchmark.py tests/test_tui.py tests/test_deepseek_support.py tests/test_textual_app.py -v 2>&1
+	@$(PY) -m pytest tests/test_hackathon_baseline.py tests/test_phase2_integration.py tests/test_phase3_solver.py tests/test_phase4_error_ledger.py tests/test_e2e_swe_benchmark.py tests/test_tui.py tests/test_deepseek_support.py tests/test_textual_app.py tests/test_groq_support.py -v 2>&1
 	@echo ""
 	@echo "[test] Running odin unit tests..."
 	@cd odin && ../$(PY) -m pytest tests/unit/ -q --tb=short 2>&1

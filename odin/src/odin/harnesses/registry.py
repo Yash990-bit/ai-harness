@@ -70,6 +70,7 @@ def _import_all_harnesses():
         deepseek,
         gemini,
         glm,
+        groq,
         minimax,
         mock,
     )

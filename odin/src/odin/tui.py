@@ -67,14 +67,16 @@ def configure_parameters():
     console.print("  [3] Claude (Anthropic)")
     console.print("  [4] Codex / GPT (OpenAI)")
     console.print("  [5] Mock Provider (Deterministic Offline Testing)")
+    console.print("  [6] Groq Cloud (Ultra-Fast LPU Inference)")
 
-    choice = Prompt.ask("[bold]Select provider[/bold]", choices=["1", "2", "3", "4", "5"], default="1")
+    choice = Prompt.ask("[bold]Select provider[/bold]", choices=["1", "2", "3", "4", "5", "6"], default="1")
     providers = {
         "1": "deepseek",
         "2": "gemini",
         "3": "claude",
         "4": "codex",
         "5": "mock",
+        "6": "groq",
     }
     selected_provider = providers[choice]
     os.environ["AI_PROVIDER"] = selected_provider
@@ -93,6 +95,8 @@ def configure_parameters():
     if selected_provider == "deepseek":
         default_model = "openrouter/free" if new_key.startswith("sk-or-") else "deepseek-chat"
         new_model = Prompt.ask("Enter model", default=default_model)
+    elif selected_provider == "groq":
+        new_model = Prompt.ask("Enter model", default="qwen/qwen3.8-27b")
     elif selected_provider == "gemini":
         new_model = Prompt.ask("Enter model", default="gemini-2.5-flash")
     elif selected_provider == "claude":
@@ -289,6 +293,9 @@ def prompt_for_initial_api_key():
         if not os.getenv("AI_PROVIDER"):
             if user_key.startswith("AIza"):
                 os.environ["AI_PROVIDER"] = "gemini"
+            elif user_key.startswith("gsk_"):
+                os.environ["AI_PROVIDER"] = "groq"
+                os.environ["AI_MODEL"] = "qwen/qwen3.8-27b"
             elif user_key.startswith("sk-or-"):
                 os.environ["AI_PROVIDER"] = "deepseek"
                 os.environ["AI_MODEL"] = "openrouter/free"
