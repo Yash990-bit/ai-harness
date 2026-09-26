@@ -9,7 +9,7 @@ from typing import Optional
 
 from odin.models import OdinConfig
 
-ALLOWED_FORCED_PROVIDERS = {"gemini", "deepseek"}
+ALLOWED_FORCED_PROVIDERS = {"gemini", "deepseek", "claude", "codex", "mock"}
 
 
 @dataclass(frozen=True)
