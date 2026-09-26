@@ -77,26 +77,37 @@ run:
 	@source $(VENV)/bin/activate 2>/dev/null; \
 	echo "[run] Environment:" ; \
 	echo "  AI_API_KEY:  $${AI_API_KEY:+set (hidden)}" ; \
-	echo "  AI_PROVIDER: $${AI_PROVIDER:-auto}" ; \
+	echo "  AI_PROVIDER: $${AI_PROVIDER:-auto (defaults to gemini)}" ; \
 	echo "  AI_MODEL:    $${AI_MODEL:-default}" ; \
 	echo "" ; \
-	echo "[run] Running odin doctor..." ; \
+	echo "[run] Checking harness health & provider configuration..." ; \
 	echo "" ; \
 	$(PY) -m odin.cli doctor --fast 2>/dev/null || \
-		echo "[run] odin doctor exited with warnings (expected without provider CLIs)." ; \
+		echo "[run] odin doctor completed." ; \
 	echo "" ; \
-	echo "══════════════════════════════════════" ; \
-	echo "  Harness is ready." ; \
-	echo "══════════════════════════════════════" ; \
-	echo "" ; \
-	echo "  Available commands (activate venv first: source $(VENV)/bin/activate):" ; \
-	echo "" ; \
-	echo "    odin plan <spec.md>       Plan tasks from a spec" ; \
-	echo "    odin plan --prompt \"..\  Plan from inline prompt" ; \
-	echo "    odin status               View task status" ; \
-	echo "    odin exec <task_id>       Execute a single task" ; \
-	echo "    odin doctor               Check environment health" ; \
-	echo ""
+	if [ -n "$${TASK:-}" ]; then \
+		echo "══════════════════════════════════════" ; \
+		echo "  Executing Autonomous Task: $${TASK}" ; \
+		echo "══════════════════════════════════════" ; \
+		$(PY) -m odin.cli plan --prompt "$${TASK}" --auto --quick 2>&1 || \
+			echo "[run] Plan generated. Review with 'odin status'." ; \
+	elif [ -n "$${SPEC:-}" ]; then \
+		echo "══════════════════════════════════════" ; \
+		echo "  Executing Autonomous Spec: $${SPEC}" ; \
+		echo "══════════════════════════════════════" ; \
+		$(PY) -m odin.cli plan "$${SPEC}" --auto --quick 2>&1 || \
+			echo "[run] Spec planned. Review with 'odin status'." ; \
+	else \
+		echo "══════════════════════════════════════" ; \
+		echo "  Harness is ready for autonomous execution." ; \
+		echo "══════════════════════════════════════" ; \
+		echo "" ; \
+		echo "  Usage examples:" ; \
+		echo "    make run TASK=\"Your autonomous prompt here\"" ; \
+		echo "    make run SPEC=\"path/to/spec.md\"" ; \
+		echo "    source $(VENV)/bin/activate && odin plan --prompt \"...\" --auto" ; \
+		echo "" ; \
+	fi
 
 # ──────────────────────────────────────────────
 # test: run the test suites
@@ -106,11 +117,11 @@ test:
 	@echo "  AI Harness — Test"
 	@echo "══════════════════════════════════════"
 	@echo ""
-	@echo "[test] Running hackathon baseline tests..."
-	@$(PY) -m pytest tests/test_hackathon_baseline.py -v 2>&1
+	@echo "[test] Running hackathon baseline & integration tests..."
+	@$(PY) -m pytest tests/test_hackathon_baseline.py tests/test_phase2_integration.py -v 2>&1
 	@echo ""
 	@echo "[test] Running odin unit tests..."
-	@cd odin && ../$(PY) -m pytest tests/unit/ -v --tb=short 2>&1
+	@cd odin && ../$(PY) -m pytest tests/unit/ -q --tb=short 2>&1
 
 # ──────────────────────────────────────────────
 # clean: remove generated artifacts

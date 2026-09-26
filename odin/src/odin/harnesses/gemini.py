@@ -1,6 +1,7 @@
 """Gemini CLI harness."""
 
 import asyncio
+import os
 import shlex
 import shutil
 import time
@@ -34,6 +35,72 @@ class GeminiHarness(BaseHarness):
         # .gemini/settings.json in the working directory (auto-discovered).
         return cmd
 
+    async def _execute_via_api(self, prompt: str, context: dict, api_key: str) -> TaskResult:
+        """Direct REST API fallback for Gemini when CLI is not installed."""
+        import httpx
+
+        start = time.monotonic()
+        model = context.get("model") or self.config.default_model or "gemini-2.5-flash"
+        clean_model = model.split("/")[-1]
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{clean_model}:generateContent?key={api_key}"
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": prompt}],
+                }
+            ]
+        }
+        timeout_seconds = context.get("timeout_seconds", 300)
+        try:
+            async with httpx.AsyncClient(timeout=float(timeout_seconds)) as client:
+                resp = await client.post(url, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+
+            candidates = data.get("candidates", [])
+            if candidates and "content" in candidates[0]:
+                parts = candidates[0]["content"].get("parts", [])
+                text = "".join(p.get("text", "") for p in parts)
+            else:
+                text = ""
+
+            usage_raw = data.get("usageMetadata", {})
+            usage = {
+                "input_tokens": usage_raw.get("promptTokenCount", 0),
+                "output_tokens": usage_raw.get("candidatesTokenCount", 0),
+                "total_tokens": usage_raw.get("totalTokenCount", 0),
+            }
+
+            duration = (time.monotonic() - start) * 1000
+
+            output_file = context.get("output_file")
+            if output_file:
+                Path(output_file).write_text(text, encoding="utf-8")
+
+            if context.get("validate_status", True):
+                status = validate_odin_status_full(text, worktree_path=context.get("working_dir"))
+                agent_success, agent_error = status.as_legacy_tuple()
+            else:
+                agent_success, agent_error = True, None
+
+            return TaskResult(
+                success=agent_success,
+                output=text,
+                error=agent_error,
+                duration_ms=round(duration, 1),
+                agent=self.name,
+                metadata={"usage": usage} if usage else {},
+            )
+        except Exception as exc:
+            duration = (time.monotonic() - start) * 1000
+            return TaskResult(
+                success=False,
+                error=f"Gemini API request failed: {exc}",
+                duration_ms=round(duration, 1),
+                agent=self.name,
+            )
+
     async def execute(self, prompt: str, context: dict) -> TaskResult:
         start = time.monotonic()
         working_dir = context.get("working_dir")
@@ -41,6 +108,18 @@ class GeminiHarness(BaseHarness):
         trace_file = context.get("trace_file")
         timeout_seconds = context.get("timeout_seconds", 300)
         timeout = timeout_seconds if timeout_seconds and timeout_seconds > 0 else None
+
+        # Direct REST API fallback if CLI is not installed
+        api_key = self.config.api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("AI_API_KEY")
+        if not shutil.which(self._cli):
+            if api_key:
+                return await self._execute_via_api(prompt, context, api_key)
+            return TaskResult(
+                success=False,
+                error=f"CLI '{self._cli}' not found on PATH and no GEMINI_API_KEY/AI_API_KEY set",
+                agent=self.name,
+            )
+
         proc: asyncio.subprocess.Process | None = None
         try:
             cmd = self.build_execute_command(prompt, context)
@@ -173,4 +252,6 @@ class GeminiHarness(BaseHarness):
         return cmd
 
     async def is_available(self) -> bool:
-        return shutil.which(self._cli) is not None
+        has_cli = shutil.which(self._cli) is not None
+        has_key = bool(self.config.api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("AI_API_KEY"))
+        return has_cli or has_key

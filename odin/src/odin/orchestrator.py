@@ -92,7 +92,7 @@ def _resolve_agent_cli(agent_name: str, cfg: AgentConfig) -> Optional[str]:
 
 
 def _list_available_agents(config: OdinConfig) -> list[str]:
-    """Agent names whose CLI binary is installed on PATH.
+    """Agent names whose CLI binary is installed on PATH or API key is available.
 
     Used to build the helpful "available alternatives" list in the
     pre-flight error message so a single-provider user sees what they CAN
@@ -101,6 +101,12 @@ def _list_available_agents(config: OdinConfig) -> list[str]:
     available = []
     for name, cfg in config.agents.items():
         if not cfg.enabled:
+            continue
+        if name == "mock":
+            available.append(name)
+            continue
+        if name == "gemini" and (cfg.api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("AI_API_KEY")):
+            available.append(name)
             continue
         binary = _resolve_agent_cli(name, cfg)
         if binary and shutil.which(binary):
@@ -475,6 +481,8 @@ class Orchestrator:
             )
         binary = _resolve_agent_cli(agent_name, cfg)
         if binary and shutil.which(binary):
+            return
+        if agent_name == "gemini" and (cfg.api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("AI_API_KEY")):
             return
         available = _list_available_agents(self.config)
         avail_str = ", ".join(available) if available else "none"

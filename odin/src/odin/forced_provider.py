@@ -35,17 +35,21 @@ def resolve_forced_provider(config: OdinConfig) -> ForcedProviderSelection:
         raise RuntimeError(f"Forced provider '{provider}' is not configured in Odin.")
 
     cli_command = cfg.cli_command or provider
-    if shutil.which(cli_command) is None:
-        raise RuntimeError(
-            f"Forced provider '{provider}' is unavailable: CLI '{cli_command}' not found on PATH."
-        )
+    has_api_key = bool(
+        cfg.api_key
+        or os.environ.get("GEMINI_API_KEY")
+        or os.environ.get("AI_API_KEY")
+        or (provider == "claude" and os.environ.get("ANTHROPIC_API_KEY"))
+        or (provider == "codex" and os.environ.get("OPENAI_API_KEY"))
+    )
+    if provider != "mock" and shutil.which(cli_command) is None:
+        if not (provider == "gemini" and has_api_key):
+            raise RuntimeError(
+                f"Forced provider '{provider}' is unavailable: CLI '{cli_command}' not found on PATH."
+            )
 
     model_names = list(cfg.models.keys())
     if model:
-        if model not in model_names:
-            raise RuntimeError(
-                f"FORCED_BASE_MODEL '{model}' does not belong to provider '{provider}'."
-            )
         resolved_model = model
     else:
         resolved_model = cfg.default_model or (model_names[0] if model_names else None)

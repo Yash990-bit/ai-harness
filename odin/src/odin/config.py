@@ -37,6 +37,45 @@ ENV_VAR_MAP = {
 }
 
 
+def map_hackathon_credentials(agents: Optional[dict] = None) -> None:
+    """Map evaluator's AI_API_KEY to provider-specific environment variables and config.
+
+    Supports hackathon standard execution:
+      export AI_API_KEY="KEY"
+      export AI_PROVIDER="gemini"  # optional, default gemini
+      export AI_MODEL="gemini-2.5-flash"  # optional
+    """
+    key = os.environ.get("AI_API_KEY")
+    if not key:
+        return
+
+    provider = (os.environ.get("AI_PROVIDER") or "gemini").strip().lower()
+    mapping = {
+        "gemini": ["GEMINI_API_KEY"],
+        "claude": ["ANTHROPIC_API_KEY"],
+        "codex": ["OPENAI_API_KEY"],
+        "minimax": ["MINIMAX_API_KEY"],
+        "glm": ["ZAI_API_KEY"],
+    }
+    target_vars = mapping.get(provider, [f"{provider.upper()}_API_KEY"])
+    for var_name in target_vars:
+        if not os.environ.get(var_name):
+            os.environ[var_name] = key
+
+    if agents and provider in agents:
+        agent_cfg = agents[provider]
+        if not agent_cfg.api_key:
+            agent_cfg.api_key = key
+        agent_cfg.enabled = True
+
+    if provider == "gemini" and not os.environ.get("FORCED_BASE_PROVIDER"):
+        os.environ["FORCED_BASE_PROVIDER"] = "gemini"
+
+    ai_model = os.environ.get("AI_MODEL")
+    if ai_model and not os.environ.get("FORCED_BASE_MODEL"):
+        os.environ["FORCED_BASE_MODEL"] = ai_model
+
+
 def _expand_env_value(value):
     """Expand ${VAR} config values, returning None for unset pure placeholders."""
     if not isinstance(value, str):
@@ -81,6 +120,8 @@ def load_config(config_path: Optional[str] = None) -> OdinConfig:
     env_path = Path.cwd() / ".env"
     if env_path.exists():
         load_dotenv(env_path)
+
+    map_hackathon_credentials()
 
     if config_path:
         path = Path(config_path)
@@ -350,6 +391,7 @@ def _load_from_yaml(path: Path, source: str) -> OdinConfig:
     # Yolo mode: auto-enable API agents when keys are present
     # (but respect explicit disables from the config file)
     _apply_yolo_mode(agents, explicitly_disabled)
+    map_hackathon_credentials(agents)
 
     # Fail-soft: drop agents whose harness is not registered so a stale
     # config entry (e.g. a removed harness) doesn't abort planning.
@@ -506,6 +548,7 @@ def _default_config(source: str) -> OdinConfig:
     }
     # Yolo mode: auto-enable API agents when keys are present
     _apply_yolo_mode(agents)
+    map_hackathon_credentials(agents)
 
     # Fail-soft: drop agents whose harness is not registered.
     agents = _filter_unknown_harnesses(agents)
