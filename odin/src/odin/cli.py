@@ -1881,6 +1881,61 @@ class OdinCLI:
             console.print("[dim]Use [bold]odin status[/bold] to see task IDs.[/dim]")
 
     # ------------------------------------------------------------------
+    # solve (autonomous SWE issue resolution & patch generation)
+    # ------------------------------------------------------------------
+
+    def solve(
+        self,
+        spec_file: Optional[str] = None,
+        prompt: Optional[str] = None,
+        mock: bool = False,
+        verify_cmd: Optional[str] = None,
+        output_patch: Optional[str] = None,
+        max_retries: int = 2,
+    ):
+        """Autonomously solve an issue, verify, and generate a patch file.
+
+        Examples:
+            odin solve --prompt "Fix division by zero error in calculator.py"
+            odin solve issue.md
+            odin solve issue.md --mock
+            odin solve --prompt "Fix bug" --verify-cmd "pytest tests/test_calc.py"
+        """
+        from odin.solver import AutonomousSolver
+
+        if not spec_file and not prompt:
+            console.print("[red]Provide either a spec file or --prompt.[/red]")
+            console.print('[dim]Usage: odin solve <spec_file>  or  odin solve --prompt "..."[/dim]')
+            return
+
+        cfg = self._get_config()
+        solver = AutonomousSolver(config=cfg)
+
+        console.print("[bold]Autonomous Problem-Solving Started...[/bold]")
+        summary = asyncio.run(
+            solver.solve(
+                prompt=prompt,
+                spec_file=spec_file,
+                mock=mock,
+                verify_cmd=verify_cmd,
+                output_patch=output_patch,
+                max_retries=max_retries,
+            )
+        )
+
+        if summary.status == "SUCCESS":
+            console.print(f"\n[bold green]Resolution SUCCESS![/bold green] ({summary.duration_seconds}s)")
+            if summary.patch_path:
+                console.print(f"Solution patch generated: [cyan]{summary.patch_path}[/cyan]")
+            if summary.verification_passed and verify_cmd:
+                console.print(f"[green]Verification passed:[/green] `{verify_cmd}`")
+        else:
+            console.print(f"\n[bold red]Resolution {summary.status}[/bold red] ({summary.duration_seconds}s)")
+            if summary.metadata.get("errors"):
+                for err in summary.metadata["errors"]:
+                    console.print(f"[dim red]{err}[/dim red]")
+
+    # ------------------------------------------------------------------
     # status (enhanced with spec column and filters)
     # ------------------------------------------------------------------
 
@@ -3046,3 +3101,8 @@ def main():
                 raise SystemExit(1)
             cause = cause.__cause__ if cause.__cause__ else cause.__context__
         raise
+
+
+if __name__ == "__main__":
+    main()
+

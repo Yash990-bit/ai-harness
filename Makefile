@@ -7,7 +7,7 @@
 #
 # No credentials are stored in this file.
 
-.PHONY: setup run test clean doctor
+.PHONY: setup run test clean doctor solve
 
 SHELL := /bin/bash
 VENV := .venv
@@ -57,12 +57,18 @@ setup:
 	@echo "  Next:      make run"
 	@echo ""
 
+# Parameters (can be passed via `make TASK="..."` or environment `export TASK="..."`)
+TASK ?=
+SPEC ?=
+VERIFY ?=
+MOCK ?=
+
 # ──────────────────────────────────────────────
 # run: start the harness
 # ──────────────────────────────────────────────
-# Phase 1: validates the environment and shows available commands.
-# The evaluator's AI_API_KEY is available in the environment.
-# In later phases this will start the full autonomous harness loop.
+# Standard evaluation entry point.
+# If TASK or SPEC is provided, runs autonomous solver to produce a solution patch.
+# Otherwise, validates environment, runs doctor, and displays usage.
 run:
 	@echo "══════════════════════════════════════"
 	@echo "  AI Harness — Run"
@@ -73,40 +79,63 @@ run:
 		echo "[run] The evaluator should run: export AI_API_KEY=\"PROVIDED_KEY\"" ; \
 		echo "" ; \
 	fi
-	@# Activate venv and run
-	@source $(VENV)/bin/activate 2>/dev/null; \
-	echo "[run] Environment:" ; \
-	echo "  AI_API_KEY:  $${AI_API_KEY:+set (hidden)}" ; \
-	echo "  AI_PROVIDER: $${AI_PROVIDER:-auto (defaults to gemini)}" ; \
-	echo "  AI_MODEL:    $${AI_MODEL:-default}" ; \
-	echo "" ; \
-	echo "[run] Checking harness health & provider configuration..." ; \
-	echo "" ; \
-	$(PY) -m odin.cli doctor --fast 2>/dev/null || \
-		echo "[run] odin doctor completed." ; \
-	echo "" ; \
-	if [ -n "$${TASK:-}" ]; then \
+	@echo "[run] Environment:"
+	@echo "  AI_API_KEY:  $${AI_API_KEY:+set (hidden)}"
+	@echo "  AI_PROVIDER: $${AI_PROVIDER:-auto (defaults to gemini)}"
+	@echo "  AI_MODEL:    $${AI_MODEL:-default}"
+	@echo ""
+	@if [ -n "$(TASK)" ]; then \
+		echo "══════════════════════════════════════" ; \
+		echo "  Executing Autonomous Task: $(TASK)" ; \
+		echo "══════════════════════════════════════" ; \
+		$(PY) -m odin.cli solve --prompt "$(TASK)" $(if $(VERIFY),--verify-cmd "$(VERIFY)",) $(if $(MOCK),--mock,) ; \
+	elif [ -n "$${TASK:-}" ]; then \
 		echo "══════════════════════════════════════" ; \
 		echo "  Executing Autonomous Task: $${TASK}" ; \
 		echo "══════════════════════════════════════" ; \
-		$(PY) -m odin.cli plan --prompt "$${TASK}" --auto --quick 2>&1 || \
-			echo "[run] Plan generated. Review with 'odin status'." ; \
+		$(PY) -m odin.cli solve --prompt "$${TASK}" $${VERIFY:+--verify-cmd "$$VERIFY"} $${MOCK:+--mock} ; \
+	elif [ -n "$(SPEC)" ]; then \
+		echo "══════════════════════════════════════" ; \
+		echo "  Executing Autonomous Spec: $(SPEC)" ; \
+		echo "══════════════════════════════════════" ; \
+		$(PY) -m odin.cli solve "$(SPEC)" $(if $(VERIFY),--verify-cmd "$(VERIFY)",) $(if $(MOCK),--mock,) ; \
 	elif [ -n "$${SPEC:-}" ]; then \
 		echo "══════════════════════════════════════" ; \
 		echo "  Executing Autonomous Spec: $${SPEC}" ; \
 		echo "══════════════════════════════════════" ; \
-		$(PY) -m odin.cli plan "$${SPEC}" --auto --quick 2>&1 || \
-			echo "[run] Spec planned. Review with 'odin status'." ; \
+		$(PY) -m odin.cli solve "$${SPEC}" $${VERIFY:+--verify-cmd "$$VERIFY"} $${MOCK:+--mock} ; \
 	else \
+		echo "[run] Checking harness health & provider configuration..." ; \
+		echo "" ; \
+		$(PY) -m odin.cli doctor --fast 2>/dev/null || \
+			echo "[run] odin doctor completed." ; \
+		echo "" ; \
 		echo "══════════════════════════════════════" ; \
 		echo "  Harness is ready for autonomous execution." ; \
 		echo "══════════════════════════════════════" ; \
 		echo "" ; \
 		echo "  Usage examples:" ; \
-		echo "    make run TASK=\"Your autonomous prompt here\"" ; \
+		echo "    make run TASK=\"Fix IndexError in sequence parser\"" ; \
 		echo "    make run SPEC=\"path/to/spec.md\"" ; \
-		echo "    source $(VENV)/bin/activate && odin plan --prompt \"...\" --auto" ; \
+		echo "    make solve TASK=\"Fix bug\" VERIFY=\"pytest tests/test_bug.py\"" ; \
 		echo "" ; \
+	fi
+
+# ──────────────────────────────────────────────
+# solve: autonomous issue resolution & patch creation
+# ──────────────────────────────────────────────
+solve:
+	@if [ -n "$(TASK)" ]; then \
+		$(PY) -m odin.cli solve --prompt "$(TASK)" $(if $(VERIFY),--verify-cmd "$(VERIFY)",) $(if $(MOCK),--mock,) ; \
+	elif [ -n "$${TASK:-}" ]; then \
+		$(PY) -m odin.cli solve --prompt "$${TASK}" $${VERIFY:+--verify-cmd "$$VERIFY"} $${MOCK:+--mock} ; \
+	elif [ -n "$(SPEC)" ]; then \
+		$(PY) -m odin.cli solve "$(SPEC)" $(if $(VERIFY),--verify-cmd "$(VERIFY)",) $(if $(MOCK),--mock,) ; \
+	elif [ -n "$${SPEC:-}" ]; then \
+		$(PY) -m odin.cli solve "$${SPEC}" $${VERIFY:+--verify-cmd "$$VERIFY"} $${MOCK:+--mock} ; \
+	else \
+		echo "Usage: make solve TASK=\"Issue prompt\" [VERIFY=\"pytest ...\"] [MOCK=1]" ; \
+		echo "       make solve SPEC=\"spec.md\" [VERIFY=\"pytest ...\"] [MOCK=1]" ; \
 	fi
 
 # ──────────────────────────────────────────────
@@ -117,8 +146,8 @@ test:
 	@echo "  AI Harness — Test"
 	@echo "══════════════════════════════════════"
 	@echo ""
-	@echo "[test] Running hackathon baseline & integration tests..."
-	@$(PY) -m pytest tests/test_hackathon_baseline.py tests/test_phase2_integration.py -v 2>&1
+	@echo "[test] Running hackathon baseline & integration test suites..."
+	@$(PY) -m pytest tests/test_hackathon_baseline.py tests/test_phase2_integration.py tests/test_phase3_solver.py -v 2>&1
 	@echo ""
 	@echo "[test] Running odin unit tests..."
 	@cd odin && ../$(PY) -m pytest tests/unit/ -q --tb=short 2>&1
