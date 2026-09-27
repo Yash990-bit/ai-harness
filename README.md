@@ -93,16 +93,6 @@ Then follow [`QUICKSTART.md`](QUICKSTART.md) — it checks your provider with `o
 
 **Status: experimental.** We ship with it daily, and edges are rough. Platform notes and known gaps are in [`docs/guides/forkd-setup.md`](docs/guides/forkd-setup.md) and each project's README — read those before filing an issue.
 
-## What it looks like
-
-![Board — kanban with agent assignments and status columns](screenshots/board-view.png)
-*Board — drag-and-drop kanban with agent assignments*
-
-![Spec — cost breakdown, task timeline, multi-agent execution](screenshots/specs-view.png)
-*Spec run — cost per agent, task timeline, proof of work*
-
-![DAG — dependency graph with wave execution](screenshots/task-breakdown.png)
-*DAG view — tasks decomposed into dependency waves*
 
 ## What's inside
 
